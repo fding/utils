@@ -1,0 +1,71 @@
+#!/usr/bin/python -O
+
+'''
+analyzer.py filename [code1] [code2] [code3]
+If no code blocks are provided, system reads from stdin.
+If one code block is provide, that block is processed for every line.
+If two are provided, the first is processed for every line, and the second after everything executes.
+If three are provided, the first is processed before anything happens, the second for every line, and the third after everything.
+
+Interface:
+    _n: current line number
+    _line: current line
+    column(n,sep): splits line using sep, and returns n-th column.
+    columns(sep): splits line using sep, and returns all columns
+    _filter: a variable that can be set to indicate if line passes a test. Optional.
+
+At the end, if no post-block is provided, number of matched lines (determined by _filter) is printed.
+
+When entering code from the command-line, semicolons can be used to separate lines
+'''
+import sys
+
+def column(n,sep=None):
+    return _line.split(sep)[n]
+
+def columns(sep=None):
+    return _line.split(sep)
+
+def code_from_argv(entry):
+    #ans=entry
+    ans="\n".join(entry.split(";;"))
+    #TODO Replace { and } with newlines, and do auto indent
+    return ans
+
+if len(sys.argv)<2:
+    sys.stderr.write("Usage: Expected one argument")
+    sys.exit(1)
+
+__pre_processor=""
+__post_processor='print "Finished processing "+sys.argv[1]+". "+str(__count)+" lines matched."'
+
+if len(sys.argv)==2:
+    __processor = sys.stdin.read()
+elif len(sys.argv)==3:
+    __processor = code_from_argv(sys.argv[2])
+elif len(sys.argv)==4:
+    __processor = code_from_argv(sys.argv[2])
+    __post_processor = code_from_argv(sys.argv[3])
+elif len(sys.argv)==5:
+    __processor = code_from_argv(sys.argv[3])
+    __post_processor = code_from_argv(sys.argv[4])
+    __pre_processor = code_from_argv(sys.argv[2])
+
+__f=open(sys.argv[1])
+
+_n=0
+__count=0
+
+if __pre_processor!="":
+    exec(__pre_processor)
+
+for _line in __f:
+    _line=_line.strip()
+    _n+=1
+    _filter=True
+    exec(__processor)
+    if _filter:
+        __count+=1
+
+if __post_processor!="":
+    exec(__post_processor)

@@ -1,0 +1,30 @@
+#!/usr/bin/python -O
+
+'''
+Input: html file with only one table
+Output: Semi-colon separated file
+'''
+
+import sys
+import re
+f=open(sys.argv[1])
+
+text=f.read()
+
+tablefinder = re.compile(r"<table[^>]*?>(.+)</table>")
+m=tablefinder.search(text)
+inner_content = m.group(1).strip()
+
+rowsfinder = re.compile(r"<tr[^>]*?>.*?</tr>")
+rows= rowsfinder.findall(inner_content)
+
+tdfinder = re.compile(r"<td[^>]*?>.*?</td>")
+tdcontentfinder=re.compile(r"<td[^>]*?>(.*?)</td>")
+for row in rows:
+    tds=tdfinder.findall(row)
+    row=""
+    for td in tds:
+        m=tdcontentfinder.search(td)
+        row+=m.group(1).strip()+";"
+    row=row.strip(';')
+    print row
