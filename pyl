@@ -1,7 +1,7 @@
 #!/usr/bin/python -O
 
 '''
-analyzer.py filename [code1] [code2] [code3]
+pyl: filename [code1] [code2] [code3]
 If no code blocks are provided, system reads from stdin.
 If one code block is provide, that block is processed for every line.
 If two are provided, the first is processed for every line, and the second after everything executes.
@@ -9,7 +9,9 @@ If three are provided, the first is processed before anything happens, the secon
 
 Interface:
     _n: current line number
-    _line: current line
+    _line (for csv files): current line
+    _row (for html files): current row in table
+    _count: number of lines that have passed the filter 
     column(n,sep): splits line using sep, and returns n-th column.
     columns(sep): splits line using sep, and returns all columns
     _filter: a variable that can be set to indicate if line passes a test. Optional.
@@ -17,14 +19,46 @@ Interface:
 At the end, if no post-block is provided, number of matched lines (determined by _filter) is printed.
 
 When entering code from the command-line, semicolons can be used to separate lines
+
+Users could use any variable that does not begin with an underscore. Variables preceded
+by one underscore are system variables exposed to the user.
+The only ones users should modify is _filter.
+
+
 '''
 import sys
+import argparse
 
-def column(n,sep=None):
-    return _line.split(sep)[n]
+import re
 
-def columns(sep=None):
-    return _line.split(sep)
+__tablefinder = re.compile(r"<table[^>]*?>(.+)</table>")
+__rowsfinder = re.compile(r"<tr[^>]*?>.*?</tr>")
+__tdfinder = re.compile(r"<td[^>]*?>.*?</td>")
+__tdcontentfinder=re.compile(r"<td[^>]*?>(.*?)</td>")
+
+parser=argparse.ArgumentParser(description='Python Line Processor')
+parser.add_argument("file",metavar="file", help="File to be processed.")
+parser.add_argument("blocks",metavar='code1', nargs="*",help="Code to run for each line. Takes 0-3 blocks. If no blocks are provided, code is read from stdin. If 2 blocks are provided, the second is run after all lines are processed. If 3 blocks are provided, the first block is run before the file is processed and the last after the file is processed.") 
+args=parser.parse_args()
+
+def table_parse(f):
+    text=f.read()
+
+    m=__tablefinder.search(text)
+    inner_content = m.group(1).strip()
+
+    rows= __rowsfinder.findall(inner_content)
+
+    table=[]
+    for row in rows:
+        tds=__tdfinder.findall(row)
+        row=[]
+        for td in tds:
+            m=__tdcontentfinder.search(td)
+            row.append(m.group(1).strip())
+        table.append(row)
+    return table
+
 
 def code_from_argv(entry):
     #ans=entry
@@ -32,40 +66,55 @@ def code_from_argv(entry):
     #TODO Replace { and } with newlines, and do auto indent
     return ans
 
-if len(sys.argv)<2:
-    sys.stderr.write("Usage: Expected one argument")
-    sys.exit(1)
-
 __pre_processor=""
-__post_processor='print "Finished processing "+sys.argv[1]+". "+str(__count)+" lines matched."'
+__post_processor='print "Finished processing "+args.file+". "+str(_count)+" lines matched."'
 
-if len(sys.argv)==2:
+if len(args.blocks)==0:
     __processor = sys.stdin.read()
-elif len(sys.argv)==3:
-    __processor = code_from_argv(sys.argv[2])
-elif len(sys.argv)==4:
-    __processor = code_from_argv(sys.argv[2])
-    __post_processor = code_from_argv(sys.argv[3])
-elif len(sys.argv)==5:
-    __processor = code_from_argv(sys.argv[3])
-    __post_processor = code_from_argv(sys.argv[4])
-    __pre_processor = code_from_argv(sys.argv[2])
+elif len(args.blocks)==1:
+    __processor = code_from_argv(args.blocks[0])
+elif len(args.blocks)==2:
+    __processor = code_from_argv(args.blocks[0])
+    __post_processor = code_from_argv(args.blocks[1])
+elif len(args.blocks)==3:
+    __processor = code_from_argv(args.blocks[1])
+    __post_processor = code_from_argv(args.blocks[2])
+    __pre_processor = code_from_argv(sys.argv[0])
 
-__f=open(sys.argv[1])
+__input_type="csv"
+
+if args.file[-4:]=="html":
+    __input_type="html"
+
+__f=open(args.file)
 
 _n=0
-__count=0
+_count=0
 
 if __pre_processor!="":
     exec(__pre_processor)
 
-for _line in __f:
-    _line=_line.strip()
-    _n+=1
-    _filter=True
-    exec(__processor)
-    if _filter:
-        __count+=1
+if __input_type=="csv": 
+    def column(n,sep=None):
+        return _line.split(sep)[n]
+
+    def columns(sep=None):
+        return _line.split(sep)
+    
+    for _line in __f:
+        _line=_line.strip()
+        _n+=1
+        _filter=True
+        exec(__processor)
+        if _filter:
+            _count+=1
+elif __input_type=="html":
+    for _row in table_parse(__f):
+        _n+=1
+        _filter=True
+        exec(__processor)
+        if _filter:
+            _count+=1
 
 if __post_processor!="":
     exec(__post_processor)
