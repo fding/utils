@@ -79,7 +79,7 @@ elif len(args.blocks)==2:
 elif len(args.blocks)==3:
     __processor = code_from_argv(args.blocks[1])
     __post_processor = code_from_argv(args.blocks[2])
-    __pre_processor = code_from_argv(sys.argv[0])
+    __pre_processor = code_from_argv(args.blocks[0])
 
 __input_type="csv"
 
