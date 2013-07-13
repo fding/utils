@@ -37,6 +37,11 @@ __tdfinder = re.compile(r"<td[^>]*?>.*?</td>")
 __tdcontentfinder=re.compile(r"<td[^>]*?>(.*?)</td>")
 
 parser=argparse.ArgumentParser(description='Python Line Processor')
+
+parser.add_argument("--use", metavar="use", default="", help="pre-read csv of listed files")
+parser.add_argument("--silent", "-s", action="store_true", help="Don't print number of lines that passed.")
+parser.add_argument("--verbose", "-v", action="store_true", help="Automatically print all lines that pass.")
+
 parser.add_argument("file",metavar="file", help="File to be processed.")
 parser.add_argument("blocks",metavar='code1', nargs="*",help="Code to run for each line. Takes 0-3 blocks. If no blocks are provided, code is read from stdin. If 2 blocks are provided, the second is run after all lines are processed. If 3 blocks are provided, the first block is run before the file is processed and the last after the file is processed.") 
 args=parser.parse_args()
@@ -67,7 +72,13 @@ def code_from_argv(entry):
     return ans
 
 __pre_processor=""
-__post_processor='print "Finished processing "+args.file+". "+str(_count)+" lines matched."'
+
+if args.silent:
+    __post_processor=""
+else:
+    __post_processor='print "Finished processing "+args.file+". "+str(_count)+" lines matched."'
+
+
 
 if len(args.blocks)==0:
     __processor = sys.stdin.read()
@@ -75,7 +86,7 @@ elif len(args.blocks)==1:
     __processor = code_from_argv(args.blocks[0])
 elif len(args.blocks)==2:
     __processor = code_from_argv(args.blocks[0])
-    __post_processor = code_from_argv(args.blocks[1])
+    __post_processor = code_from_argv(args.blocks[1])+"\n"+__post_processor
 elif len(args.blocks)==3:
     __processor = code_from_argv(args.blocks[1])
     __post_processor = code_from_argv(args.blocks[2])
@@ -86,21 +97,50 @@ __input_type="csv"
 if args.file[-4:]=="html":
     __input_type="html"
 
-__f=open(args.file)
+_files={}
 
+for f_name in args.use.split(","):
+    if f_name.strip()=="":
+        continue
+    f=open(f_name)
+    _files[f_name]=f.read()
+    f.close()
+
+### Utility Functions ###
+
+def _in(filename, target, mode="l"):
+    lines=_read(filename).split("\n")
+    for line in lines:
+        if line.strip()==target:
+            return True
+    return False
+
+def _read(filename):
+    if filename in _files:
+        return _files[filename]
+
+    f=open(filename)
+    ret=f.read()
+    f.close()
+    return ret
+
+if __input_type=="csv": 
+    def column(n,sep=None):
+        return _line.split(sep)[n].strip()
+
+    def columns(sep=None):
+        return _line.split(sep)
+
+### Actually Processing Files ###
+
+__f=open(args.file)
 _n=0
 _count=0
 
 if __pre_processor!="":
     exec(__pre_processor)
 
-if __input_type=="csv": 
-    def column(n,sep=None):
-        return _line.split(sep)[n]
-
-    def columns(sep=None):
-        return _line.split(sep)
-    
+if __input_type=="csv":
     for _line in __f:
         _line=_line.strip()
         _n+=1
@@ -108,6 +148,8 @@ if __input_type=="csv":
         exec(__processor)
         if _filter:
             _count+=1
+            if args.verbose:
+                print _line
 elif __input_type=="html":
     for _row in table_parse(__f):
         _n+=1
@@ -115,6 +157,10 @@ elif __input_type=="html":
         exec(__processor)
         if _filter:
             _count+=1
+            if args.verbose:
+                print _line
 
 if __post_processor!="":
     exec(__post_processor)
+
+__f.close()
