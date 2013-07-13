@@ -49,7 +49,7 @@ Examples:
 * `pyl test.txt "_filter=int(column(1))>18"` will print the number of lines in test.txt with the first column
 greater than 18 (where columns are separated by spaces; to use comma-separated columns, use `column(1,',')`)
 Columns accept negative indices as well, in the obvious Python way. `_filter` is
-* `pyl -vs test.t "_filter=int(column(1))>18" will print the lines in test.txt that satisfy the condition.
+* `pyl -vs test.t "_filter=int(column(1))>18"` will print the lines in test.txt that satisfy the condition.
 This is just a shortcut for `pyl test.txt "_filter=int(column(1))>18;;if _filter: print _line"`.
 * `pyl test.html "_filter=int(_row[0])>18"` will look for a table in test.html and parse that table, looping
 through the rows of that table and applying the provided block to each row.
