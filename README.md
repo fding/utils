@@ -53,3 +53,5 @@ Columns accept negative indices as well, in the obvious Python way. `_filter` is
 This is just a shortcut for `pyl test.txt "_filter=int(column(1))>18;;if _filter: print _line"`.
 * `pyl test.html "_filter=int(_row[0])>18"` will look for a table in test.html and parse that table, looping
 through the rows of that table and applying the provided block to each row.
+* `pyl -vs test.txt --use test1.txt "_filter=_in('test1.txt',_line)"` will print the lines in test.txt that 
+are also in test1.txt
