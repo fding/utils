@@ -63,7 +63,7 @@ This is just a shortcut for `pyl -s test.txt "_filter=int(column(1))>18;;if _fil
 1. `pyl test.html "_filter=int(_row[0])>18"` will look for a table in test.html and parse that table, looping
 through the rows of that table and checking if the first column is greater than 18.
 1. `pyl -vs test.txt --use test1.txt "_filter=_in('test1.txt',_line)"` will print the lines in test.txt that 
-are also in test1.txt
+are also in test1.txt (which might be some reference list).
 
 This saves you from typing something like:
 
