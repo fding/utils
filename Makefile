@@ -1,2 +1,2 @@
 all:
-	gcc ctrlp.c -o ctrlp
+	gcc -O3 fuzzy.c -o fuzzy
